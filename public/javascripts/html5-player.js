@@ -1,7 +1,18 @@
+jQuery.extend({
+  getQueryParameters : function(str) {
+    return (str || document.location.search).replace(/(^\?)/,'').split("&").map(function(n){return n = n.split("="),this[n[0]] = n[1],this}.bind({}))[0];
+  }
+});
+
 $(document).ready(playVideo);
 var source, player;
+var exampleManifest = "http://csm-e.cds1.yospace.com/csm/live/119101367.m3u8";
 
 function playVideo() {
+  var params = $.getQueryParameters();
+  if (params.preload) {
+    $('#manifestUrl').val(exampleManifest);
+  }
   source = $('#manifestUrl').val();
   if(source) {
     vjsPlay(source);
