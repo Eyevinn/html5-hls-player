@@ -1,0 +1,16 @@
+extends layout
+
+block content
+  h1 HTML5 HLS Player
+  input(id="manifestUrl", size="60", type="text", name="manifestUrl", value="http://csm-e.cds1.yospace.com/csm/live/119101367.m3u8")
+  button(type="button", onClick="playVideo()") Play
+  div
+    video(id="video-container", class="video-js vjs-default-skin", style="width: 720px; height: 405px", controls="1")
+  label(for="level") Quality level 
+    select(id="level", name="level")
+ 
+  script(src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js')
+  script(type="text/javascript" src="javascripts/html5-player.js")
+  script(type="text/javascript" src="javascripts/hls.min.js")
+  script(type="text/javascript" src="javascripts/video.js")
+  script(type="text/javascript" src="javascripts/videojs-contrib-hls.min.js")
