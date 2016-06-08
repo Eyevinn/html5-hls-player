@@ -16,6 +16,25 @@ a {
   color: #00B7FF;
 }
 
+.small {
+  font-size; 10px;
+}
+
+.tiny {
+  font: 8px Arial;
+}
+
+.logo {
+  width: 180px;
+  display: block;
+  margin: 0 auto;
+  margin-top: 5px;
+}
+
+h1 {
+  font-size: 3em;
+}
+
 #wrapper {
   min-height: 100%;
   position: relative;
@@ -24,6 +43,10 @@ a {
 #content {
   text-align: center;
   padding-bottom: 20px;
+}
+
+#logosection {
+  padding-top: 20px;
 }
 
 #playbackdata {
