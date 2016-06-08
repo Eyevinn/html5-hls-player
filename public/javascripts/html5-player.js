@@ -60,5 +60,8 @@ function vjsPlay(videosrc) {
     type: "application/x-mpegURL",
     src: videosrc
   });
-  player.play();
+  player.ready(function() {
+    var p = this;
+    p.play();
+  });
 }

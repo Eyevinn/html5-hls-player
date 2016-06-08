@@ -11,8 +11,15 @@ block content
       button(type="button", onClick="playVideo()") Play
       div(id="videocontent")
         video(id="video-container", class="video-js vjs-default-skin", style="width: 720px; height: 405px", controls="1")
-      div(id="playbackdata")
-        p(class="tiny") Video.js v5.10.2 / videojs-contrib-hls v3.0.4
+        div(id="playbackdata")
+          table.tinytable
+            tr
+              td Version:
+              td(id="version") Video.js v5.10.2 / videojs-contrib-hls v3.0.4
+            tr
+              td Quality levels:
+              td(id="qualitylevels")  
+      div(id="playercontrols")
         label(for="level") Quality level 
         select(id="level", name="level")
     div(id="footer")
