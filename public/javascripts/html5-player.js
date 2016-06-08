@@ -15,53 +15,43 @@ function playVideo() {
   }
   source = $('#manifestUrl').val();
   if(source) {
-    vjsPlay(source);
-    //hlsPlay(source);
+    play(source);
   }
 }
 
-function hlsjs_initQualitySelector(hls) {
-  var sel = $("#level");
-  sel.empty();
-  var defopt = $('<option></option>').attr("value", "auto").text("Auto");
-  defopt.attr('selected', true);
-  sel.append(defopt);
-  for (l=0; l<hls.levels.length; l++) {
-    var lev = hls.levels[l];
-    var option = $('<option></option>').attr("value", l).text(lev.width + "x" + lev.height + " ("+lev.bitrate/1000+" kbps)");
-    sel.append(option);
-  }
-  sel.on("change", function(ev) {
-    if(ev.target.value != "auto") {
-      hls.loadLevel = ev.target.value;
-    } else {
-      hls.loadLevel = -1;
-    } 
-  });
-}
-
-function hlsPlay(videosrc) {
-  var player = document.getElementById('video-container');
+function play(videosrc) {
+  player = document.getElementById('video-container');
   var hls = new Hls();
+  $('#data_version').html("hls.js 0.5.34"); 
   hls.loadSource(videosrc);
   hls.attachMedia(player);
   hls.on(Hls.Events.MANIFEST_PARSED, function() {
-    hlsjs_initQualitySelector(hls);
     player.play();
   });
-  hls.on(Hls.Events.LEVEL_SWITCH, function(ev, data) {
-    console.log(data);
+
+  player.addEventListener('timeupdate', function(ev) {
+    var p = this;
+/*
+    var tech = p.tech({ IWillNotUseThisInPlugins: true });
+    var hls = tech.hls;
+    if(hls) {
+      $('#data_bandwidth').html(Math.round(hls.stats.bandwidth / 8 / 1000) + " kbps ("+ Math.round(hls.stats.mediaBytesTransferred / 1024 / 1024) + " MB transferred)");
+    } else {
+      $('#data_bandwidth').html("n/a");
+    }
+    $('#data_currenttime').html(Math.round(tech.currentTime()) + " sec of " + tech.duration() + " sec");
+    var buf = tech.buffered;
+    $('#data_buffered').html(buf.length + " ranges buffered");
+*/
   });
+  player.addEventListener('error', qos_events);
+  player.addEventListener('progress', qos_events);
+  player.addEventListener('waiting', qos_events);
+  player.addEventListener('stalled', qos_events);
+  player.addEventListener('playing', qos_events);
+  player.addEventListener('ratechange', qos_events);
 }
 
-function vjsPlay(videosrc) {
-  player = videojs('video-container');
-  player.src({
-    type: "application/x-mpegURL",
-    src: videosrc
-  });
-  player.ready(function() {
-    var p = this;
-    p.play();
-  });
+function qos_events(ev) {
+  $('#data_qualityevents').html(ev.type);
 }

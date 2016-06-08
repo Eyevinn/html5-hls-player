@@ -15,10 +15,22 @@ block content
           table.tinytable
             tr
               td Version:
-              td(id="version") Video.js v5.10.2 / videojs-contrib-hls v3.0.4
+              td(id="data_version") 
             tr
               td Quality levels:
-              td(id="qualitylevels")  
+              td(id="data_qualitylevels")  
+            tr
+              td Estimated bandwidth:
+              td(id="data_bandwidth")
+            tr
+              td Current time:
+              td(id="data_currenttime")
+            tr
+              td Buffered:
+              td(id="data_buffered")
+            tr
+              td QoS events:
+              td(id="data_qualityevents")
       div(id="playercontrols")
         label(for="level") Quality level 
         select(id="level", name="level")
