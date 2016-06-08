@@ -29,6 +29,14 @@ function play(videosrc) {
     initQualitySelector(hls, data.levels);
     player.play();
   });
+  hls.on(Hls.Events.FRAG_LOADING, frag_events);
+  hls.on(Hls.Events.FRAG_LOAD_PROGRESS, frag_events);
+  hls.on(Hls.Events.FRAG_LOADED, frag_events);
+  hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, frag_events);
+  hls.on(Hls.Events.FRAG_PARSING_DATA, frag_events);
+  hls.on(Hls.Events.FRAG_PARSED, frag_events);
+  hls.on(Hls.Events.FRAG_BUFFERED, frag_events);
+  hls.on(Hls.Events.FPS_DROP, drop_frames);
 
   player.addEventListener('timeupdate', function(ev) {
     var currentlev = hls.levels[hls.currentLevel];
@@ -63,6 +71,22 @@ function initQualitySelector(hls, levels) {
       hls.loadLevel = -1;
     } 
   });
+}
+
+function frag_events(ev, data) {
+  var fragevents = {};
+  fragevents[Hls.Events.FRAG_LOADING] = 'Loading fragment';
+  fragevents[Hls.Events.FRAG_LOAD_PROGRESS] = 'Fragment load in progress';
+  fragevents[Hls.Events.FRAG_LOADED] = 'Fragment loaded';
+  fragevents[Hls.Events.FRAG_PARSING_INIT_SEGMENT] = 'ID3 parsing completed';
+  fragevents[Hls.Events.FRAG_PARSING_DATA] = 'moof/mdat extracted';
+  fragevents[Hls.Events.FRAG_PARSED] = 'Fragment parsed';
+  fragevents[Hls.Events.FRAG_BUFFERED] = 'Remuxed MP4 boxes appended to buffer';
+  $('#data_fragevents').html(fragevents[ev]);
+}
+
+function drop_frames(ev, data) {
+  $('#data_framedrops').html(data.currentDropped + " frames dropped");
 }
 
 function qos_events(ev) {
