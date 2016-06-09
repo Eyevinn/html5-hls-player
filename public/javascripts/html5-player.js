@@ -4,9 +4,32 @@ jQuery.extend({
   }
 });
 
+function secondsToSMPTE(seconds, framerate) {
+    var f = Math.floor((seconds % 1) * framerate);
+    var s = Math.floor(seconds);
+    var m = Math.floor(s / 60);
+    var h = Math.floor(m / 60);
+    m = m % 60;
+    s = s % 60;
+
+    return {h: h, m: m, s: s, f: f};
+}
+
+/** Pretty print SMPTE timecode JSON object */
+function SMPTEToString(timecode) {
+    if (timecode.h < 10) { timecode.h = "0" + timecode.h; }
+    if (timecode.m < 10) { timecode.m = "0" + timecode.m; }
+    if (timecode.s < 10) { timecode.s = "0" + timecode.s; }
+    if (timecode.f < 10) { timecode.f = "0" + timecode.f; }
+
+    return timecode.h + ":" + timecode.m + ":" + timecode.s + ":" + timecode.f;
+}
+
+
 $(document).ready(function() { playVideo(false); });
 var source, player;
 var exampleManifest = "http://csm-e.cds1.yospace.com/csm/live/119101367.m3u8";
+var totalDuration;
 
 function playVideo(dodebug) {
   var params = $.getQueryParameters();
@@ -16,6 +39,15 @@ function playVideo(dodebug) {
   source = $('#manifestUrl').val();
   if(source) {
     play(source, dodebug);
+  }
+}
+
+function toggleOverlay() {
+  var overlay = $('#textoverlay');
+  if(overlay.css("display") == "none") {
+    overlay.css("display", "block");
+  } else {
+    overlay.css("display", "none");
   }
 }
 
@@ -42,12 +74,20 @@ function play(videosrc, debug) {
   hls.on(Hls.Events.FRAG_PARSED, frag_events);
   hls.on(Hls.Events.FRAG_BUFFERED, frag_events);
   hls.on(Hls.Events.ERROR, error_events);
+  hls.on(Hls.Events.LEVEL_LOADED, function(ev, data) {
+    if(!data.details.live) {
+      totalDuration = data.details.totalduration;
+    } else {
+      totalDuration = -1;
+    }
+  });
 
   player.addEventListener('timeupdate', function(ev) {
     if (hls.currentLevel > 0) {
       var currentlev = hls.levels[hls.currentLevel];
       $('#data_bandwidth').html(currentlev.width + "x" + currentlev.height + " (" + currentlev.bitrate/1000 + ") kbps"); 
     }
+    $('#overlay_timedata').html(SMPTEToString(secondsToSMPTE(player.currentTime, 25))+" / " + (totalDuration == -1 ? "LIVE" : SMPTEToString(secondsToSMPTE(totalDuration, 25))));
   });
   player.addEventListener('error', qos_events);
   player.addEventListener('progress', qos_events);
@@ -101,11 +141,16 @@ function frag_events(ev, data) {
   if (ev == Hls.Events.FRAG_PARSING_DATA && data.type == 'video') {
     var ptsdata = "<p>HLS: PTS: "+parseFloat(data.startPTS).toFixed(3)+" - "+parseFloat(data.endPTS).toFixed(3)+" ("+data.nb+" samples)";
     ptsdata = ptsdata + ", DTS: "+parseFloat(data.startDTS).toFixed(3)+" - "+parseFloat(data.endDTS).toFixed(3)+" ("+data.nb+" samples)</p>";
-    ptsdata = ptsdata + "<p>Mediasource: DTS: "+data.baseMediaDTS+"</p>";
-    $('#textoverlay').html(ptsdata);
+    $('#overlay_ptsdata').html(ptsdata);
   }
   if (ev == Hls.Events.FRAG_LOADED) {
-    // console.log(data.frag.cc);
+    var fraginfo = '';
+    for(i=0; i<data.frag.tagList.length; i++) {
+      var tag = data.frag.tagList[i];
+      var filename = data.frag.url.substring(data.frag.url.lastIndexOf('/')+1);
+      fraginfo = fraginfo + "" + data.frag.loadIdx+":"+tag[0]+" ("+parseFloat(data.frag.duration).toFixed(2)+" sec / "+data.stats.total+" bytes / "+filename+")<br>";
+    }
+    $('#data_fragment').html(fraginfo);
   }
 }
 
