@@ -21,7 +21,9 @@ function playVideo(dodebug) {
 
 function play(videosrc, debug) {
   player = document.getElementById('video-container');
-  var hls = new Hls({debug: debug});
+  var hls = new Hls({
+    debug: debug
+  });
   $('#data_version').html("hls.js " + Hls.version); 
   if(debug) {
     $('#textoverlay').css("display", "block");
@@ -42,8 +44,10 @@ function play(videosrc, debug) {
   hls.on(Hls.Events.ERROR, error_events);
 
   player.addEventListener('timeupdate', function(ev) {
-    var currentlev = hls.levels[hls.currentLevel];
-    $('#data_bandwidth').html(currentlev.width + "x" + currentlev.height + " (" + currentlev.bitrate/1000 + ") kbps"); 
+    if (hls.currentLevel > 0) {
+      var currentlev = hls.levels[hls.currentLevel];
+      $('#data_bandwidth').html(currentlev.width + "x" + currentlev.height + " (" + currentlev.bitrate/1000 + ") kbps"); 
+    }
   });
   player.addEventListener('error', qos_events);
   player.addEventListener('progress', qos_events);
@@ -95,9 +99,13 @@ function frag_events(ev, data) {
   fragevents[Hls.Events.FRAG_BUFFERED] = 'Remuxed MP4 boxes appended to buffer';
   $('#data_fragevents').html(fragevents[ev]);
   if (ev == Hls.Events.FRAG_PARSING_DATA && data.type == 'video') {
-    var ptsdata = "<p>PTS: "+data.startPTS+" - "+data.endPTS+" ("+data.nb+" samples)</p>";
-    ptsdata = ptsdata + "<p>DTS: "+data.startDTS+" - "+data.endDTS+" ("+data.nb+" samples)</p>";
+    var ptsdata = "<p>HLS: PTS: "+parseFloat(data.startPTS).toFixed(3)+" - "+parseFloat(data.endPTS).toFixed(3)+" ("+data.nb+" samples)";
+    ptsdata = ptsdata + ", DTS: "+parseFloat(data.startDTS).toFixed(3)+" - "+parseFloat(data.endDTS).toFixed(3)+" ("+data.nb+" samples)</p>";
+    ptsdata = ptsdata + "<p>Mediasource: DTS: "+data.baseMediaDTS+"</p>";
     $('#textoverlay').html(ptsdata);
+  }
+  if (ev == Hls.Events.FRAG_LOADED) {
+    // console.log(data.frag.cc);
   }
 }
 
