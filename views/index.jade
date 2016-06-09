@@ -8,9 +8,11 @@ block content
     div(id="content")
       h1 HTML5 HLS Player 
       input(id="manifestUrl", size="100", type="text", name="manifestUrl")
-      button(type="button", onClick="playVideo()") Play
+      button(type="button", onClick="playVideo(false)") Play
+      button(type="button", onClick="playVideo(true)") Debug
       div(id="videocontent")
         video(id="video-container", class="video-js vjs-default-skin", style="width: 720px; height: 405px", controls="1")
+        div(id="textoverlay")
         div(id="playbackdata")
           table.tinytable
             tr
@@ -29,8 +31,8 @@ block content
               td QoS events:
               td(id="data_qualityevents")
             tr
-              td Framedrops:
-              td(id="data_framedrops")
+              td Last error:
+              td(id="data_error") No error
       div(id="playercontrols")
         label(for="level") Quality level 
         select(id="level", name="level")

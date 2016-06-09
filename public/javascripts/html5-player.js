@@ -4,25 +4,28 @@ jQuery.extend({
   }
 });
 
-$(document).ready(playVideo);
+$(document).ready(function() { playVideo(false); });
 var source, player;
 var exampleManifest = "http://csm-e.cds1.yospace.com/csm/live/119101367.m3u8";
 
-function playVideo() {
+function playVideo(dodebug) {
   var params = $.getQueryParameters();
   if (params.preload) {
     $('#manifestUrl').val(exampleManifest);
   }
   source = $('#manifestUrl').val();
   if(source) {
-    play(source);
+    play(source, dodebug);
   }
 }
 
-function play(videosrc) {
+function play(videosrc, debug) {
   player = document.getElementById('video-container');
-  var hls = new Hls();
+  var hls = new Hls({debug: debug});
   $('#data_version').html("hls.js " + Hls.version); 
+  if(debug) {
+    $('#textoverlay').css("display", "block");
+  }
   hls.loadSource(videosrc);
   hls.attachMedia(player);
   hls.on(Hls.Events.MANIFEST_PARSED, function(ev, data) {
@@ -36,7 +39,7 @@ function play(videosrc) {
   hls.on(Hls.Events.FRAG_PARSING_DATA, frag_events);
   hls.on(Hls.Events.FRAG_PARSED, frag_events);
   hls.on(Hls.Events.FRAG_BUFFERED, frag_events);
-  hls.on(Hls.Events.FPS_DROP, drop_frames);
+  hls.on(Hls.Events.ERROR, error_events);
 
   player.addEventListener('timeupdate', function(ev) {
     var currentlev = hls.levels[hls.currentLevel];
@@ -73,6 +76,14 @@ function initQualitySelector(hls, levels) {
   });
 }
 
+function error_events(ev, data) {
+  var errmsg = data.type + ": " + data.details;
+  if (data.type == Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE) {
+    errmsg = errmsg + " ("+ data.hole +")";
+  }
+  $('#data_error').html(errmsg);
+}
+
 function frag_events(ev, data) {
   var fragevents = {};
   fragevents[Hls.Events.FRAG_LOADING] = 'Loading fragment';
@@ -83,12 +94,20 @@ function frag_events(ev, data) {
   fragevents[Hls.Events.FRAG_PARSED] = 'Fragment parsed';
   fragevents[Hls.Events.FRAG_BUFFERED] = 'Remuxed MP4 boxes appended to buffer';
   $('#data_fragevents').html(fragevents[ev]);
-}
-
-function drop_frames(ev, data) {
-  $('#data_framedrops').html(data.currentDropped + " frames dropped");
+  if (ev == Hls.Events.FRAG_PARSING_DATA && data.type == 'video') {
+    var ptsdata = "<p>PTS: "+data.startPTS+" - "+data.endPTS+" ("+data.nb+" samples)</p>";
+    ptsdata = ptsdata + "<p>DTS: "+data.startDTS+" - "+data.endDTS+" ("+data.nb+" samples)</p>";
+    $('#textoverlay').html(ptsdata);
+  }
 }
 
 function qos_events(ev) {
-  $('#data_qualityevents').html(ev.type);
+  var qosevents = {};
+  qosevents['progress'] = "Buffering video data";
+  qosevents['waiting'] = "Waiting for requested video data";
+  qosevents['stalled'] = "Buffering stalled";
+  qosevents['error'] = "Error occured while loading video";
+  qosevents['playing'] = "Playback resumed following paused or download delay";
+  qosevents['ratechange'] = "Playback rate has changed";
+  $('#data_qualityevents').html(qosevents[ev.type]);
 }
