@@ -1,10 +1,17 @@
 var windowDuration = 20000;
 var windowStart = 0;
 
-function refreshCanvas(events, currentpos) {
+var pipeline_timer;
+
+function refreshCanvas(events, pipeline, currentpos) {
   try {
     var windowTime = getWindowTimeRange(events);
     canvasFragmentUpdate($('#canvas_fragments')[0], windowTime.min, windowTime.max, events.fragments, currentpos);
+    if (!pipeline_timer) {
+      pipeline_timer = setInterval(function() {
+        canvasPipelineUpdate($('#canvas_pipeline')[0], pipeline);
+      }, 500);
+    }
   } catch (err) {
     console.log("refreshCanvas error: " + err.message);
   }
@@ -109,4 +116,116 @@ function canvasDrawFragment(ctx, frag, margin, axisdur, axislength, minTime) {
   ctx.fillRect(xpos, ypos, x_w, h);
   ctx.fillText(frag.id2, xpos, ypos+20);
 
+}
+
+function canvasPipelineUpdate(canvas, pipeline) {
+  var ctx = canvas.getContext('2d');
+  var margin = 10;
+  var t = performance.now() - pipeline.t0;
+  var minTime = t;
+  var maxTime = t + 500;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "black"; 
+  ctx.font = "8px Verdana";
+  ctx.fillText(Math.round(minTime) + "-" + Math.round(maxTime) + " (ms)", margin+5, 10);
+
+  ctx.strokeRect(margin+20, margin+30, 100, 90);
+  ctx.fillText("Manifest Loader", margin+20+15, margin+30+10);
+  ctx.strokeRect(margin+20+100, margin+30+30, 80, 20);
+
+  ctx.strokeRect(margin+200, margin+30, 100, 90);
+  ctx.fillText("Fragment Parser", margin+200+15, margin+30+10);
+  ctx.strokeRect(margin+200+100, margin+30+30, 80, 20);
+ 
+  ctx.strokeRect(margin+380, margin+30, 100, 90);
+  ctx.fillText("TS Demuxer", margin+380+15, margin+30+10);
+  ctx.strokeRect(margin+380+100, margin+30+30, 80, 20);
+   
+  ctx.strokeRect(margin+560, margin+30, 100, 90);
+  ctx.fillText("MP4 Remuxer", margin+560+15, margin+30+10);
+  ctx.strokeRect(margin+560+100, margin+30+30, 80, 20);
+
+  ctx.strokeRect(margin+740, margin+30, 200, 150);
+  ctx.fillText("Source Buffer", margin+740+15, margin+30+10);
+
+  var requested = [];
+  var loaded = [];
+  var parsed = [];
+  var buffered = [];
+  var insource = [];
+
+  for (var i=0; i<pipeline.fragments.length; i++) {
+    var f = pipeline.fragments[i];
+    if (f.requested >= minTime && f.requested <= maxTime) {
+      requested.push(f);
+    } 
+    if (f.loaded >= minTime && f.loaded <= maxTime) {
+      loaded.push(f);
+    } 
+    if (f.parsed >= minTime && f.parsed <= maxTime) {
+      parsed.push(f);
+    } 
+    if (f.buffered >= minTime && f.buffered <= maxTime) {
+      buffered.push(f);
+    }
+    if (minTime > 3000 && f.buffered >= minTime-3000 && f.buffered <= maxTime+3000) {
+      insource.push(f);
+    }
+  }
+  requested.sort(function(a, b) { return b.id2 - a.id2 });
+  loaded.sort(function(a, b) { return b.id2 - a.id2 });
+  parsed.sort(function(a, b) { return b.id2 - a.id2 });
+  buffered.sort(function(a, b) { return b.id2 - a.id2 });
+
+  var colors = {
+    0: "blue",
+    1: "green",
+    2: "black",
+    3: "red"
+  };
+  var w = 15;
+  for(var i=0; i<requested.length; i++) {
+    var f = requested[i];
+    ctx.fillStyle = colors[f.color];
+    ctx.fillRect(margin+120+(i*w), margin+30+30, w-2, w);
+    ctx.fillStyle = "white";
+    ctx.fillText(f.id2, margin+120+2+(i*w), margin+30+30+10);
+  }
+  for(var i=0; i<loaded.length; i++) {
+    var f = loaded[i];
+    ctx.fillStyle = colors[f.color];
+    ctx.fillRect(margin+300+(i*w), margin+30+30, w-2, w);
+    ctx.fillStyle = "white";
+    ctx.fillText(f.id2, margin+300+2+(i*w), margin+30+30+10);
+  }
+  for(var i=0; i<parsed.length; i++) {
+    var f = parsed[i];
+    ctx.fillStyle = colors[f.color];
+    ctx.fillRect(margin+480+(i*w), margin+30+30, w-2, w);
+    ctx.fillStyle = "white";
+    ctx.fillText(f.id2, margin+480+2+(i*w), margin+30+30+10);
+  }
+  for(var i=0; i<buffered.length; i++) {
+    var f = buffered[i];
+    ctx.fillStyle = colors[f.color];
+    ctx.fillRect(margin+660+(i*w), margin+30+30, w-2, w);
+    ctx.fillStyle = "white";
+    ctx.fillText(f.id2, margin+660+2+(i*w), margin+30+30+10);
+  }
+  var count = 0;
+  var row = 0;
+  for(var i=0; i<insource.length; i++) {
+    var f = insource[i];
+    ctx.fillStyle = colors[f.color];
+    ctx.fillRect(margin+840+(count*w), margin+35+(row*20), w-2, w);
+    ctx.fillStyle = "white";
+    ctx.fillText(f.id2, margin+840+2+(count*w), margin+35+(row*20)+10);
+    count++;
+    if (count > 5) {
+      count = 0;
+      row++;
+    }
+  }
 }

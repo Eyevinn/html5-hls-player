@@ -31,6 +31,7 @@ var source, player;
 var exampleManifest = "http://csm-e.cds1.yospace.com/csm/live/119101367.m3u8";
 var totalDuration;
 var events;
+var pipeline;
 
 function playVideo(dodebug) {
   var params = $.getQueryParameters();
@@ -63,6 +64,10 @@ function toggleMetrics() {
 
 function play(videosrc, debug) {
   events = {
+    t0: performance.now(),
+    fragments: []
+  };
+  pipeline = {
     t0: performance.now(),
     fragments: []
   };
@@ -165,11 +170,12 @@ function frag_events(ev, data) {
   fragevents[Hls.Events.FRAG_PARSED] = 'Fragment parsed';
   fragevents[Hls.Events.FRAG_BUFFERED] = 'Remuxed MP4 boxes appended to buffer';
   $('#data_fragevents').html(fragevents[ev]);
+
   if (ev == Hls.Events.FRAG_PARSING_DATA && data.type == 'video') {
     var ptsdata = "<p>HLS: PTS: "+parseFloat(data.startPTS).toFixed(3)+" - "+parseFloat(data.endPTS).toFixed(3)+" ("+data.nb+" samples)";
     ptsdata = ptsdata + ", DTS: "+parseFloat(data.startDTS).toFixed(3)+" - "+parseFloat(data.endDTS).toFixed(3)+" ("+data.nb+" samples)</p>";
     $('#overlay_ptsdata').html(ptsdata);
-    refreshCanvas(events, player.currentTime*1000);
+    refreshCanvas(events, pipeline, player.currentTime*1000);
   }
   if (ev == Hls.Events.FRAG_LOADED) {
     var fraginfo = '';
@@ -179,7 +185,7 @@ function frag_events(ev, data) {
       fraginfo = fraginfo + "" + data.frag.loadIdx+":"+tag[0]+" ("+parseFloat(data.frag.duration).toFixed(2)+" sec / "+data.stats.total+" bytes / "+filename+")<br>";
     }
     $('#data_fragment').html(fraginfo);
-    refreshCanvas(events, player.currentTime*1000);
+    refreshCanvas(events, pipeline, player.currentTime*1000);
   }
   if (ev == Hls.Events.FRAG_BUFFERED) {
     var f_ev = {
@@ -196,7 +202,18 @@ function frag_events(ev, data) {
       size : data.stats.length
     };
     events.fragments.push(f_ev);
-    refreshCanvas(events, player.currentTime*1000);
+    var p_ev = {
+      type: "p_fragment",
+      id: data.frag.level,
+      id2: data.frag.sn,
+      color: Math.floor(Math.random() * 4),
+      requested: data.stats.trequest,
+      loaded: data.stats.tload,
+      parsed: data.stats.tparsed,
+      buffered: data.stats.tbuffered
+    };
+    pipeline.fragments.push(p_ev);
+    refreshCanvas(events, pipeline, player.currentTime*1000);
   }
 }
 
