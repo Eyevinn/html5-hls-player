@@ -52,6 +52,15 @@ function toggleOverlay() {
   }
 }
 
+function toggleMetrics() {
+  var metrics = $('#realtimemetrics');
+  if(metrics.css("display") == "none") {
+    metrics.css("display", "block");
+  } else {
+    metrics.css("display", "none");
+  }
+}
+
 function play(videosrc, debug) {
   events = {
     t0: performance.now(),
