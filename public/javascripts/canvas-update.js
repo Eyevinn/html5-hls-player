@@ -51,7 +51,7 @@ function canvasFragmentUpdate(canvas, minTime, maxTime, fragments, currentpos) {
   ctx.beginPath();
   currentpos = currentpos-minTime;
   ctx.moveTo(margin + (axislength*currentpos/axisdur), canvas.height-xaxispos-15);
-  ctx.lineTo(margin + (axislength*currentpos/axisdur), margin+10);
+  ctx.lineTo(margin + (axislength*currentpos/axisdur), margin+15);
   ctx.stroke();
   ctx.fillText(Math.round(currentpos) + "ms", margin+(axislength*currentpos/axisdur)-30, canvas.height-xaxispos-5);
   
@@ -66,6 +66,7 @@ function canvasFragmentUpdate(canvas, minTime, maxTime, fragments, currentpos) {
   var frag = fragments[fragments.length-1]; 
   if(frag && frag.bw) {
     ctx.fillText(Math.round(frag.bw/1000) + " kbps", canvas.width-margin-40, 10); 
+    ctx.fillText(Math.round(frag.size/1024) + " KB", canvas.width-margin-40, 20);
   }
 
   for(var i=1; i<intervals; i++) {
