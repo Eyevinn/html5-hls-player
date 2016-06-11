@@ -42,10 +42,13 @@ block content
         label(for="level") Quality level 
         select(id="level", name="level")
         button(type="button", onClick="toggleOverlay()") Show/Hide Overlay
+    div(id="realtimemetrics")
+      canvas(id="canvas_fragments", height="200", width="1000")
     div(id="footer")
   
   script(src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js')
   script(type="text/javascript" src="javascripts/html5-player.js")
+  script(type="text/javascript" src="javascripts/canvas-update.js")
   script(type="text/javascript" src="javascripts/hls.min.js")
   script(type="text/javascript" src="javascripts/video.js")
   script(type="text/javascript" src="javascripts/videojs-contrib-hls.min.js")

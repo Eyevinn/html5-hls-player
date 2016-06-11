@@ -98,3 +98,15 @@ h1 {
   text-align: left;
   padding-left: 20px;
 }
+
+#realtimemetrics {
+  margin-left: auto;
+  margin-right: auto;
+  width: 1000px;
+}
+
+#canvas_fragments {
+  width: 1000px;
+  height: 200px;
+  border: 1px solid #000000;
+}

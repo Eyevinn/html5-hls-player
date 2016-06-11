@@ -30,6 +30,7 @@ $(document).ready(function() { playVideo(false); });
 var source, player;
 var exampleManifest = "http://csm-e.cds1.yospace.com/csm/live/119101367.m3u8";
 var totalDuration;
+var events;
 
 function playVideo(dodebug) {
   var params = $.getQueryParameters();
@@ -52,9 +53,14 @@ function toggleOverlay() {
 }
 
 function play(videosrc, debug) {
+  events = {
+    t0: performance.now(),
+    fragments: []
+  };
   player = document.getElementById('video-container');
   var hls = new Hls({
-    debug: debug
+    debug: debug,
+    enableWorker: false
   });
   $('#data_version').html("hls.js " + Hls.version); 
   if(debug) {
@@ -73,7 +79,9 @@ function play(videosrc, debug) {
   hls.on(Hls.Events.FRAG_PARSING_DATA, frag_events);
   hls.on(Hls.Events.FRAG_PARSED, frag_events);
   hls.on(Hls.Events.FRAG_BUFFERED, frag_events);
-  hls.on(Hls.Events.ERROR, error_events);
+  hls.on(Hls.Events.ERROR, function(ev, data) {
+    error_events(ev, data, hls);
+  });
   hls.on(Hls.Events.LEVEL_LOADED, function(ev, data) {
     if(!data.details.live) {
       totalDuration = data.details.totalduration;
@@ -120,12 +128,22 @@ function initQualitySelector(hls, levels) {
   });
 }
 
-function error_events(ev, data) {
+function error_events(ev, data, hls) {
   var errmsg = data.type + ": " + data.details;
-  if (data.type == Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE) {
-    errmsg = errmsg + " ("+ data.hole +")";
-  }
   $('#data_error').html(errmsg);
+  if (data.fatal) {
+    switch(data.type) {
+      case Hls.ErrorTypes.NETWORK_ERROR:
+        hls.startLoad();
+        break;
+      case Hls.ErrorTypes.MEDIA_ERROR:
+        hls.recoverMediaError();
+        break;
+      default:
+        hls.destroy();
+        break;
+    }
+  }
 }
 
 function frag_events(ev, data) {
@@ -142,6 +160,7 @@ function frag_events(ev, data) {
     var ptsdata = "<p>HLS: PTS: "+parseFloat(data.startPTS).toFixed(3)+" - "+parseFloat(data.endPTS).toFixed(3)+" ("+data.nb+" samples)";
     ptsdata = ptsdata + ", DTS: "+parseFloat(data.startDTS).toFixed(3)+" - "+parseFloat(data.endDTS).toFixed(3)+" ("+data.nb+" samples)</p>";
     $('#overlay_ptsdata').html(ptsdata);
+    refreshCanvas(events, player.currentTime*1000);
   }
   if (ev == Hls.Events.FRAG_LOADED) {
     var fraginfo = '';
@@ -151,6 +170,24 @@ function frag_events(ev, data) {
       fraginfo = fraginfo + "" + data.frag.loadIdx+":"+tag[0]+" ("+parseFloat(data.frag.duration).toFixed(2)+" sec / "+data.stats.total+" bytes / "+filename+")<br>";
     }
     $('#data_fragment').html(fraginfo);
+    refreshCanvas(events, player.currentTime*1000);
+  }
+  if (ev == Hls.Events.FRAG_BUFFERED) {
+    var f_ev = {
+      type: "fragment",
+      id: data.frag.level,
+      id2: data.frag.sn,
+      time: data.stats.trequest - events.t0,
+      latency: data.stats.tfirst - data.stats.trequest,
+      load: data.stats.tload - data.stats.tfirst,
+      parsing: data.stats.tparsed - data.stats.tload,
+      buffer: data.stats.tbuffered - data.stats.tparsed,
+      duration: data.stats.tbuffered - data.stats.tfirst,
+      bw: Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst)),
+      size : data.stats.length
+    };
+    events.fragments.push(f_ev);
+    refreshCanvas(events, player.currentTime*1000);
   }
 }
 
