@@ -4,6 +4,38 @@ jQuery.extend({
   }
 });
 
+function codecToString(codec) {
+  /*
+   * Baseline 42E0
+   * Main 4D40
+   * High 6400
+   * Extended 58A0
+   *
+   * Level:
+   * 1E=>30=>3.0
+   * 1F=>31=>3.1
+   */
+  var codecmap = {
+    "mp4a.40.2": "AAC-LC",
+    "mp4a.40.5": "HE-AAC",
+    "mp4a.40.34": "MP3",
+    "avc1.42001e": "H.264 Baseline Profile level 3.0",
+    "avc1.66.30": "H.264 Baseline Profile level 3.0",
+    "avc1.42001f": "H.264 Baseline Profile level 3.1",
+    "avc1.4d001e": "H.264 Main Profile level 3.0",
+    "avc1.77.30": "H.264 Main Profile level 3.0",
+    "avc1.4d001f": "H.264 Main Profile level 3.1",
+    "avc1.4d4015": "H.264 Main Profile level 2.1",
+    "avc1.4d401f": "H.264 Main Profile level 3.1",
+    "avc1.4d0028": "H.264 Main Profile level 4.0",
+    "avc1.4d4029": "H.264 Main Profile level 4.1",
+    "avc1.64001f": "H.264 High Profile level 3.1",
+    "avc1.640028": "H.264 High Profile level 4.0",
+    "avc1.640029": "H.264 High Profile level 4.1"
+  };
+  return codecmap[codec] || '';
+}
+
 function secondsToSMPTE(seconds, framerate) {
     var f = Math.floor((seconds % 1) * framerate);
     var s = Math.floor(seconds);
@@ -91,6 +123,7 @@ function play(videosrc, debug) {
   hls.on(Hls.Events.FRAG_LOADED, frag_events);
   hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, frag_events);
   hls.on(Hls.Events.FRAG_PARSING_DATA, frag_events);
+  hls.on(Hls.Events.FRAG_PARSING_METADATA, frag_events);
   hls.on(Hls.Events.FRAG_PARSED, frag_events);
   hls.on(Hls.Events.FRAG_BUFFERED, frag_events);
   hls.on(Hls.Events.ERROR, function(ev, data) {
@@ -165,8 +198,9 @@ function frag_events(ev, data) {
   fragevents[Hls.Events.FRAG_LOADING] = 'Loading fragment';
   fragevents[Hls.Events.FRAG_LOAD_PROGRESS] = 'Fragment load in progress';
   fragevents[Hls.Events.FRAG_LOADED] = 'Fragment loaded';
-  fragevents[Hls.Events.FRAG_PARSING_INIT_SEGMENT] = 'ID3 parsing completed';
+  fragevents[Hls.Events.FRAG_PARSING_INIT_SEGMENT] = 'Init segment extracted';
   fragevents[Hls.Events.FRAG_PARSING_DATA] = 'moof/mdat extracted';
+  fragevents[Hls.Events.FRAG_PARSING_METADATA] = 'ID3 parsing completed';
   fragevents[Hls.Events.FRAG_PARSED] = 'Fragment parsed';
   fragevents[Hls.Events.FRAG_BUFFERED] = 'Remuxed MP4 boxes appended to buffer';
   $('#data_fragevents').html(fragevents[ev]);
@@ -177,6 +211,27 @@ function frag_events(ev, data) {
     $('#overlay_ptsdata').html(ptsdata);
     refreshCanvas(events, pipeline, player.currentTime*1000);
   }
+  if (ev == Hls.Events.FRAG_PARSING_INIT_SEGMENT) {
+    var codecdata = '';
+
+    codecdata = codecdata + "Audio: "+data.tracks.audio.metadata.channelCount+"ch(s): "+data.tracks.audio.codec+" ("+codecToString(data.tracks.audio.codec)+")<br>";
+    codecdata = codecdata + "Video: "+data.tracks.video.metadata.width+"x"+data.tracks.video.metadata.height+": "+data.tracks.video.codec+" ("+codecToString(data.tracks.video.codec)+")";
+    $('#data_media_codec').html(codecdata);
+  }
+  if (ev == Hls.Events.FRAG_PARSING_DATA) {
+    var moof = data.data1; // Movie Fragment Box
+    var mdat = data.data2; // Media Data Boxes
+    var ptsdata = "PTS: ["+parseFloat(data.startPTS).toFixed(2)+"/"+parseFloat(data.endPTS).toFixed(2)+"]";
+    var dtsdata = "DTS: ["+parseFloat(data.startDTS).toFixed(2)+"/"+parseFloat(data.endDTS).toFixed(2)+"]";
+    if(data.type == "video") {
+      $('#data_video_moof').html("(V) moof: " + moof.length + " bytes "+ptsdata+" "+dtsdata);
+      $('#data_video_mdat').html("(V) mdat: " + mdat.length + " bytes ("+data.nb+" samples)");
+    } else if (data.type == "audio") {
+      $('#data_audio_moof').html("(A) moof: " + moof.length + " bytes "+ptsdata+" "+dtsdata);
+      $('#data_audio_mdat').html("(A) mdat: " + mdat.length + " bytes ("+data.nb+" samples)");
+     }
+  }
+
   if (ev == Hls.Events.FRAG_LOADED) {
     var fraginfo = '';
     for(i=0; i<data.frag.tagList.length; i++) {
