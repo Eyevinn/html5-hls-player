@@ -116,3 +116,9 @@ h1 {
   height: 200px;
   border: 1px solid #000000;
 }
+
+#canvas_bandwidth {
+  width: 1000px;
+  height: 200px;
+  border: 1px solid #000000;
+}

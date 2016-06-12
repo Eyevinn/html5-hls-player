@@ -253,7 +253,8 @@ function frag_events(ev, data) {
       parsing: data.stats.tparsed - data.stats.tload,
       buffer: data.stats.tbuffered - data.stats.tparsed,
       duration: data.stats.tbuffered - data.stats.tfirst,
-      bw: Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst)),
+      bw: Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.trequest)), // bits per millisecond
+      totaltime: data.stats.tbuffered - data.stats.tfirst,
       size : data.stats.length
     };
     events.fragments.push(f_ev);

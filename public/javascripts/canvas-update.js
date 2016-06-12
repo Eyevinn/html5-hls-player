@@ -1,15 +1,21 @@
-var windowDuration = 20000;
-var windowStart = 0;
-
 var pipeline_timer;
+var bandwidth_timer;
+var max_bw_kbps = 0;
+var max_size_KB = 0;
 
 function refreshCanvas(events, pipeline, currentpos) {
   try {
-    var windowTime = getWindowTimeRange(events);
+    var windowTime = getWindowTimeRange(events, 20000);
     canvasFragmentUpdate($('#canvas_fragments')[0], windowTime.min, windowTime.max, events.fragments, currentpos);
     if (!pipeline_timer) {
       pipeline_timer = setInterval(function() {
         canvasPipelineUpdate($('#canvas_pipeline')[0], pipeline);
+      }, 500);
+    }
+    if (!bandwidth_timer) {
+      bandwidth_timer = setInterval(function() {
+        var tr = getWindowTimeRange(events, 50000);
+        canvasBandwidthUpdate($('#canvas_bandwidth')[0], tr.min, tr.max, events.fragments);
       }, 500);
     }
   } catch (err) {
@@ -17,21 +23,96 @@ function refreshCanvas(events, pipeline, currentpos) {
   }
 }
 
-function getWindowTimeRange(events) {
+function getWindowTimeRange(events, winDur) {
   var tnow, minTime, maxTime;
   if(events.fragments.length) {
     tnow = events.fragments[events.fragments.length-1].time;
   } else {
     tnow = 0;
   }
-  if(windowDuration) {
-    minTime = Math.max(0, tnow-windowDuration);
-    maxTime = Math.min(minTime + windowDuration, tnow);
+  if(winDur) {
+    minTime = Math.max(0, tnow-winDur);
+    maxTime = Math.min(minTime + winDur, tnow);
   } else {
     minTime = 0;
     maxTime = tnow;
   }
   return { min: minTime, max: maxTime, now: tnow };
+}
+
+function canvasBandwidthUpdate(canvas, minTime, maxTime, fragments) {
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var xaxispos = 15;
+  var margin = 10;
+  var axislength = canvas.width-margin;
+  var axisdur = maxTime - minTime;
+  var yaxislength = canvas.height-margin-xaxispos;
+  var yaxissize = Math.max(8000, max_bw_kbps+2000); // kbps
+  var yaxissize_size = Math.max(8000, max_size_KB+2000); // KB
+
+  // Draw axis
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin, canvas.height-xaxispos);
+  ctx.lineTo(axislength, canvas.height-xaxispos);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(margin, canvas.height-xaxispos);
+  ctx.lineTo(margin, margin);
+  ctx.stroke();
+
+  // Draw timeline
+  ctx.font = "8px Verdana";
+  ctx.fillStyle = "black";
+  ctx.fillText(Math.round(minTime), margin, canvas.height-xaxispos+10);
+  ctx.fillText(Math.round(maxTime), canvas.width-margin-20, canvas.height-xaxispos+10);
+
+  var scale = '';
+  if (max_bw_kbps > 100000) {
+    scale = "Mbps";
+  } else {
+    scale = "Kbps";
+  }
+  ctx.fillStyle = "blue";
+  ctx.fillText("Measured bandwidth ("+scale+")", margin+5, 10);
+  ctx.fillStyle = "red";
+  ctx.fillText("Size (KB)", margin+5, 20);
+
+  for (var i=0; i<fragments.length; i++) {
+    var f = fragments[i];
+    var start = Math.round(f.time);
+    if (start >= minTime && start <= maxTime) {
+      var xpos, x_w=10, h;
+      ctx.fillStyle = "blue";
+      xpos = margin + axislength*(f.time-minTime) / axisdur;
+      ypos = canvas.height-xaxispos-10;
+      x_w = 10;
+      var bw_kbps = Math.round((f.bw*1000)/1024)
+      if(bw_kbps > max_bw_kbps) {
+        max_bw_kbps = bw_kbps;
+      }
+      h = bw_kbps * (yaxislength / yaxissize);
+      ctx.fillRect(xpos, ypos-h, x_w, h);
+      if(scale == "Mbps") {
+        ctx.fillText(Math.round(bw_kbps/1024), xpos, ypos-h-10);
+      } else {
+        ctx.fillText(Math.round(bw_kbps), xpos, ypos-h-10);
+      }
+      ctx.fillStyle = "red";
+      xpos = xpos+15;
+      var size_KB = f.size / 1024;
+      if (size_KB > max_size_KB) {
+        max_size_KB = size_KB;
+      }
+      h = size_KB * (yaxislength / yaxissize_size);
+      ctx.fillRect(xpos, ypos-h, x_w, h);
+      ctx.fillText(Math.round(size_KB), xpos, ypos-h-10);
+
+      ctx.fillStyle = "black";
+      ctx.fillText(f.id2, xpos-9, ypos+8);
+    }   
+  }
 }
 
 function canvasFragmentUpdate(canvas, minTime, maxTime, fragments, currentpos) {
@@ -72,7 +153,9 @@ function canvasFragmentUpdate(canvas, minTime, maxTime, fragments, currentpos) {
   // Draw bps for last fragment
   var frag = fragments[fragments.length-1]; 
   if(frag && frag.bw) {
-    ctx.fillText(Math.round(frag.bw/1000) + " kbps", canvas.width-margin-40, 10); 
+    // frag.bw is in bits per milliseconds
+    bw_mbps = (frag.bw * 1000) / 1024 / 1024;
+    ctx.fillText(Math.round(bw_mbps) + " Mbps", canvas.width-margin-40, 10); 
     ctx.fillText(Math.round(frag.size/1024) + " KB", canvas.width-margin-40, 20);
   }
 
